@@ -2,14 +2,18 @@ package com.aprz.log
 
 import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
+import com.aprz.log.asm.LogClassVisitor
 import groovy.io.FileType
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.io.FileUtils
 import org.gradle.api.Project
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
+import org.objectweb.asm.ClassWriter
 
 class LogsTransform extends Transform {
 
-    Project project;
+    Project project
 
     LogsTransform(Project project) {
         this.project = project
@@ -17,7 +21,7 @@ class LogsTransform extends Transform {
 
     @Override
     String getName() {
-        return ">>" + this.getClass().getSimpleName() + "<<";
+        return this.getClass().getSimpleName()
     }
 
     @Override
@@ -47,12 +51,14 @@ class LogsTransform extends Transform {
                 // 遍历目录
                 // 文件夹里面包含的是我们手写的类以及R.class、BuildConfig.class以及R$XXX.class等
                 input.directoryInputs.each {
-                    directoryInput ->
-                        directoryInput.file.traverse(type: FileType.FILES, nameFilter:~/.*\.class/) {
-                            File classFile ->
-                                injectClassFile(classFile)
+                    DirectoryInput directoryInput ->
+                        directoryInput.file.eachFileRecurse {
+                            File file ->
+                                if (checkFileName(file.name)) {
+                                    injectClassFile(file)
+                                }
                         }
-                        handleDirectoryInput(directoryInput, transformInvocation.outputProvider)
+                        copyDirectory(directoryInput, transformInvocation.outputProvider)
                 }
 
 
@@ -60,18 +66,29 @@ class LogsTransform extends Transform {
                 // 但是后面的 transform 可能需要处理，所以需要从输入流原封不动的写到输出流
                 input.jarInputs.each {
                     jarInput ->
-                        handleJarInput(jarInput, transformInvocation.outputProvider)
+                        copyJar(jarInput, transformInvocation.outputProvider)
                 }
         }
     }
 
-    static void injectClassFile(File classFile) {
-
+    static boolean checkFileName(String name) {
+        return name.endsWith(".class") && !name.startsWith("R\$") &&
+                "R.class" != name && "BuildConfig.class" != name
     }
 
-    static void handleDirectoryInput(DirectoryInput directoryInput, TransformOutputProvider outputProvider) {
-//        LogInjectUtil.inject(directoryInput.file.absolutePath, project)
+    static void injectClassFile(File file) {
+        ClassReader classReader = new ClassReader(file.bytes)
+        ClassWriter classWriter = new ClassWriter(classReader, ClassWriter.COMPUTE_MAXS)
+        ClassVisitor cv = new LogClassVisitor(classWriter)
+        classReader.accept(cv, ClassReader.EXPAND_FRAMES)
+        byte[] code = classWriter.toByteArray()
+        FileOutputStream fos = new FileOutputStream(
+                file.parentFile.absolutePath + File.separator + file.name)
+        fos.write(code)
+        fos.close()
+    }
 
+    static void copyDirectory(DirectoryInput directoryInput, TransformOutputProvider outputProvider) {
         // 获取output目录
         def dest = outputProvider.getContentLocation(directoryInput.name,
                 directoryInput.contentTypes, directoryInput.scopes, Format.DIRECTORY)
@@ -80,7 +97,7 @@ class LogsTransform extends Transform {
         FileUtils.copyDirectory(directoryInput.file, dest)
     }
 
-    static void handleJarInput(JarInput jarInput, TransformOutputProvider outputProvider) {
+    static void copyJar(JarInput jarInput, TransformOutputProvider outputProvider) {
         // 重命名输出文件（同目录copyFile会冲突）
         // 这里也是我的一个疑惑的地方
         // 几乎所有网上的代码都是这样的

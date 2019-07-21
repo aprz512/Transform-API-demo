@@ -8,6 +8,9 @@ class LogPlugin implements Plugin<Project> {
 
     @Override
     void apply(Project project) {
+
+        println('welcome to log inject plugin...')
+
         // 找到项目中的 某个继承至 BaseExtension 的扩展
         def ext = project.extensions.getByType(BaseExtension)
         // 往该扩展中添加 transform
