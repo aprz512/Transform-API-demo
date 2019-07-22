@@ -3,7 +3,6 @@ package com.aprz.log
 import com.android.build.api.transform.*
 import com.android.build.gradle.internal.pipeline.TransformManager
 import com.aprz.log.asm.LogClassVisitor
-import groovy.io.FileType
 import org.apache.commons.codec.digest.DigestUtils
 import org.apache.commons.io.FileUtils
 import org.gradle.api.Project
@@ -26,17 +25,17 @@ class LogsTransform extends Transform {
 
     @Override
     Set<QualifiedContent.ContentType> getInputTypes() {
-        return TransformManager.CONTENT_CLASS;
+        return TransformManager.CONTENT_CLASS
     }
 
     @Override
     Set<QualifiedContent.Scope> getScopes() {
-        return TransformManager.SCOPE_FULL_PROJECT;
+        return TransformManager.SCOPE_FULL_PROJECT
     }
 
     @Override
     boolean isIncremental() {
-        return false;
+        return false
     }
 
     @Override
