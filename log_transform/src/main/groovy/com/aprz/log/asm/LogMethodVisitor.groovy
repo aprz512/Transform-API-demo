@@ -31,9 +31,9 @@ class LogMethodVisitor extends MethodVisitor {
         super.visitCode()
         // 在方法之前插入 Log.e("", "")
         // 这两个是参数
-        this.mv.visitLdcInsn('log_inject')
-        this.mv.visitLdcInsn(this.name)
-        this.mv.visitMethodInsn(Opcodes.INVOKESTATIC, 'android/util/Log', 'e', '(Ljava/lang/String;Ljava/lang/String;)I', false)
+        visitLdcInsn('log_inject')
+        visitLdcInsn(this.name)
+        visitMethodInsn(Opcodes.INVOKESTATIC, 'android/util/Log', 'e', '(Ljava/lang/String;Ljava/lang/String;)I', false)
         // 这里的用法有点奇怪，还需要研究一下
         // visitXXX 实际上会触发 MethodWriter 的方法，这些方法会将我们想要写入的字节码存放起来
         // 最后统一的写入到输出的 class 文件中
